@@ -1,5 +1,5 @@
 # File: agent/agent_core.py
-# Version 2.1 - Simple & Synchronous
+# FINAL, CORRECTED VERSION (v2.2)
 
 import os
 import logging
@@ -12,7 +12,8 @@ from langchain.tools import BaseTool
 # Hamara pasandeeda, taiz tareen model
 MODEL_NAME = "gemini-1.5-flash-latest"
 
-# Agent ko behtar sochne ke liye hidayat
+# Agent ko behtar sochne ke liye NAYA AUR MUKAMMAL HIDAYAT NAMA
+# Ismein {tool_names} add kar diya gaya hai.
 AGENT_PROMPT_TEMPLATE = """
 You are a world-class AI assistant named Super-Agent. Your goal is to complete the user's request by planning and executing steps using the available tools.
 
@@ -20,6 +21,10 @@ TOOLS:
 ------
 You have access to the following tools:
 {tools}
+
+TOOL NAMES:
+-----------
+{tool_names}
 
 INSTRUCTIONS:
 -------------
@@ -51,6 +56,7 @@ class SuperAgent:
 
     def register_tools(self, tools: List[BaseTool]):
         self.tools = tools
+        # Yahan hum naya, mukammal prompt istemal kar rahe hain
         prompt = PromptTemplate.from_template(AGENT_PROMPT_TEMPLATE)
         
         # Agent ko banana
@@ -66,7 +72,7 @@ class SuperAgent:
         )
         logging.info(f"Registered {len(tools)} tools.")
 
-    # YEH FUNCTION AB SAADA (SYNCHRONOUS) HAI
+    # Yeh function ab saada (synchronous) hai
     def process_request(self, request: str) -> Dict[str, Any]:
         """
         Processes the user's request using the agent executor.
