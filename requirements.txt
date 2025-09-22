@@ -1,6 +1,5 @@
-Flask==3.0.0
-gunicorn==22.0.0
-langchain==0.2.1
-langchain-google-genai==1.0.4
-PyGithub==2.3.0
-gevent==24.2.1 
+Flask
+gunicorn
+langchain-google-genai
+PyGithub
+langchain
