@@ -1,87 +1,69 @@
-# File: main.py (Final Version with Lazy Initialization)
+# File: main.py (ULTRA-SIMPLE, BULLETPROOF VERSION)
 from flask import Flask, request, jsonify
 import os
-import asyncio
 import logging
 
-# Inhein abhi import nahi karenge, function ke andar karenge
-# from agent.agent_core import SuperAgent
-# from tools.tool_registry import get_all_tools
+# Imports ko yahan le aayein
+from agent.agent_core import SuperAgent
+from tools.tool_registry import get_all_tools
 
+# Logging setup
+logging.basicConfig(level=logging.INFO)
+
+# Flask app initialize karna
 app = Flask(__name__)
 
-# Agent ko global variable ke taur par rakhein, lekin initialize na karein
+# Agent ko global variable ke taur par rakhein
 agent_instance = None
-agent_initialized = False
 
 def initialize_agent_globally():
     """
-    Agent ko sirf ek baar initialize karta hai, jab pehli request aati hai.
+    Agent ko sirf ek baar initialize karta hai.
     """
-    global agent_instance, agent_initialized
-        
-    # Agar pehle se initialized hai to dobara na karein
-    if agent_initialized:
+    global agent_instance
+    if agent_instance is not None:
         return
 
-    print("First request received. Initializing Super-Agent now...")
-    logging.info("First request received. Initializing Super-Agent now...")
-        
-    # Ab yahan import karein
-    from agent.agent_core import SuperAgent
-    from tools.tool_registry import get_all_tools
-
+    logging.info("Attempting to initialize Super-Agent...")
     try:
-        # API keys ko check karna
         if not os.getenv("GEMINI_API_KEY") or not os.getenv("GITHUB_TOKEN"):
-            raise ConnectionError("API keys are not set in Cloudflare environment variables.")
+            raise ConnectionError("API keys not found in environment variables.")
 
         agent_instance = SuperAgent()
         tools = get_all_tools()
         agent_instance.register_tools(tools)
-        agent_initialized = True
-        print("✅ Super-Agent initialized successfully!")
         logging.info("✅ Super-Agent initialized successfully!")
     except Exception as e:
-        # Agar initialization fail ho to log karein
-        agent_instance = None
-        agent_initialized = False
-        print(f"❌ CRITICAL: Agent initialization failed: {e}")
         logging.error(f"❌ CRITICAL: Agent initialization failed: {e}", exc_info=True)
-
-
-@app.before_request
-def ensure_agent_is_ready():
-    """
-    Har request se pehle yeh function chalta hai aur agent ko initialize karta hai.
-    """
-    initialize_agent_globally()
-
+        # Yahan error ko raise karein taake logs mein nazar aaye
+        raise e
 
 @app.route('/')
 def home():
-    return "<h1>Super-Agent is alive!</h1><p>Send POST requests to /ask</p>", 200
-
+    return "<h1>Super-Agent is alive!</h1>", 200
 
 @app.route('/ask', methods=['POST'])
 def ask_agent():
-    if not agent_initialized or not agent_instance:
-        return jsonify({"error": "Agent could not be initialized. Check server logs."}), 500
+    # Har request par check karein ke agent initialize hua ya nahi
+    if agent_instance is None:
+        return jsonify({"error": "Agent is not initialized. Check server logs for critical errors."}), 500
 
     data = request.get_json()
     if not data or 'prompt' not in data:
         return jsonify({"error": "Request must be JSON with a 'prompt' key."}), 400
 
     user_prompt = data['prompt']
-        
+    
     try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(agent_instance.process_request(user_prompt))
-        loop.close()
-            
-        return jsonify(result)
+        # Naya, saada tareeqa agent ko run karne ka
+        # Hum ab asyncio istemal nahi kar rahe
+        result = agent_instance.agent_executor.invoke({"input": user_prompt})
+        final_answer = result.get('output', 'Agent did not provide a final answer.')
+        return jsonify({"type": "success", "final_answer": final_answer})
     except Exception as e:
         logging.error(f"Error during request processing: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
+# Server ko start karne se pehle agent ko initialize karein
+# Yeh Cloudflare ke "Health Check" ke liye zaroori hai
+initialize_agent_globally()
